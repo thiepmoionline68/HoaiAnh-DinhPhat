@@ -1351,7 +1351,7 @@
       border-radius: 18px;
       padding: 18px;
       border: 1px solid rgba(107, 20, 26, 0.14);
-      margin-bottom: 18px;
+      margin-bottom: 0;
       text-align: left;
     }
 
@@ -1726,11 +1726,10 @@
       transform: translateY(0);
     }
   </style>
-    <!-- Cấu hình Chạy Độc Lập & Đồng bộ GitHub Pages - LS-Wedding -->
+    <!-- Cấu hình Chạy Độc Lập -->
     <script>
         window.WEDDING_CARD_ID = "22";
         window.WEDDING_IDENTIFY = "quynguyen";
-        window.WEDDING_API_URL = "https://ls-weddings.laravel.cloud";
         window.INITIAL_WISHES = [];
     </script>
 </head>
@@ -2087,7 +2086,7 @@
       <h2 class="section-heading">Sổ lưu bút</h2>
       <p class="section-subtext">Gửi lời chúc tốt đẹp nhất đến Đình Phát &amp; Hoài Anh</p>
 
-      <form class="guestbook-form" id="wishForm" onsubmit="submitWish(event)">
+      <form class="guestbook-form" id="wishForm">
         <input type="text" id="guestNameInput" name="sender_name" placeholder="Tên của bạn *" required />
 
         <span class="rsvp-group-title">Xác nhận tham dự:</span>
@@ -2121,7 +2120,7 @@
         <div class="wish-form-alert" id="wishFormAlert"></div>
       </form>
 
-      <div class="wishes-feed" id="wishesFeed">
+      <div class="wishes-feed" id="wishesFeed" hidden style="display: none;">
                           <div class="wish-item">
             <div class="wish-header"><span class="wish-author">LS Wedding</span><span class="wish-time">Gợi ý</span></div>
             <p class="wish-content">Chúc Đình Phát &amp; Hoài Anh trăm năm hạnh phúc, mãi yêu nhau đầu bạc răng long!</p>
@@ -2341,110 +2340,7 @@
       }
     }
 
-    // Guestbook Wish Submission with Laravel AJAX Integration
-    const wishStoreUrl = "./wedding-cards/22/wishes";
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 'WxBeGupq5Lk52XtSXzxyRzjAIZQDLjSJE2QfwEy0';
-
-    function submitWish(e) {
-      e.preventDefault();
-      const form = document.getElementById('wishForm');
-      const nameEl = document.getElementById('guestNameInput');
-      const wishEl = document.getElementById('guestWishInput');
-      const attEl = form.querySelector('input[name="attendance_status"]:checked');
-      const countEl = document.getElementById('guestCountInput');
-      const submitBtn = document.getElementById('wishSubmitBtn');
-      const alertEl = document.getElementById('wishFormAlert');
-      const feed = document.getElementById('wishesFeed');
-
-      const senderName = nameEl.value.trim();
-      const message = wishEl.value.trim();
-      const attendanceStatus = attEl ? attEl.value : 'attending';
-      const guestCount = attendanceStatus === 'attending' ? (parseInt(countEl?.value) || 1) : 1;
-
-      if (!senderName || !message) {
-        return;
-      }
-
-      // UI Loading state
-      submitBtn.disabled = true;
-      const originalBtnText = submitBtn.innerHTML;
-      submitBtn.innerHTML = 'Đang gửi thông tin...';
-      alertEl.className = 'wish-form-alert';
-      alertEl.style.display = 'none';
-
-      fetch(wishStoreUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-CSRF-TOKEN': csrfToken
-        },
-        body: JSON.stringify({
-          sender_name: senderName,
-          message: message,
-          attendance_status: attendanceStatus,
-          guest_count: guestCount
-        })
-      })
-      .then(res => res.json().then(data => ({ status: res.status, ok: res.ok, body: data })))
-      .then(({ ok, body }) => {
-        if (!ok || !body.success) {
-          throw new Error(body.message || 'Có lỗi xảy ra khi gửi lời chúc.');
-        }
-
-        // Render badge
-        let badgeHtml = '';
-        if (attendanceStatus === 'attending') {
-          badgeHtml = `<span class="wish-badge wish-badge-attending">✓ Tham dự (${guestCount})</span>`;
-        } else if (attendanceStatus === 'not_attending') {
-          badgeHtml = `<span class="wish-badge wish-badge-declined">Không thể đến</span>`;
-        } else {
-          badgeHtml = `<span class="wish-badge wish-badge-unsure">Chưa rõ</span>`;
-        }
-
-        const safeName = senderName.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const safeMsg = message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-        const item = document.createElement('div');
-        item.className = 'wish-item';
-        item.innerHTML = `
-          <div class="wish-header">
-            <div>
-              <span class="wish-author">${safeName}</span>
-              ${badgeHtml}
-            </div>
-            <span class="wish-time">Vừa xong</span>
-          </div>
-          <p class="wish-content">${safeMsg}</p>
-        `;
-        feed.prepend(item);
-
-        // Reset form
-        nameEl.value = '';
-        wishEl.value = '';
-        const defaultRadio = document.querySelector('input[name="attendance_status"][value="attending"]');
-        if (defaultRadio) {
-          defaultRadio.checked = true;
-          handleRsvpChange('attending');
-        }
-        if (countEl) countEl.value = '1';
-
-        // Success Alert
-        alertEl.className = 'wish-form-alert success';
-        alertEl.textContent = 'Cảm ơn bạn đã gửi lời chúc và xác nhận tham dự! ❤️';
-        setTimeout(() => {
-          alertEl.style.display = 'none';
-        }, 6000);
-      })
-      .catch(err => {
-        alertEl.className = 'wish-form-alert error';
-        alertEl.textContent = err.message || 'Không thể gửi lời chúc, vui lòng thử lại.';
-      })
-      .finally(() => {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalBtnText;
-      });
-    }
+    // Guestbook Wish Submission is handled by ./js/standalone-wishes-bridge.js (Google Forms API)
 
     // Countdown Timer
     const weddingDateStr = '2026-12-27';
